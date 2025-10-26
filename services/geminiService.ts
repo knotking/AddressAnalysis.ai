@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Chat, GroundingChunk } from "@google/genai";
 import { ReportData, ChatMessage, Source } from '../types';
 
@@ -42,6 +41,26 @@ const extractJsonFromString = (text: string): ReportData | null => {
         }
     }
     return null;
+};
+
+export const initializeChatForReport = (address: string, report: ReportData, location?: { latitude: number; longitude: number }) => {
+    chat = getAI().chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction: `You are a helpful local guide AI. You have already provided a report for the address "${address}". The report summary is: ${JSON.stringify(report)}. Now, answer follow-up questions from the user about that location. Use your knowledge and the provided tools to give accurate, up-to-date information.`,
+            tools: [{ googleSearch: {} }, { googleMaps: {} }],
+            ...(location && {
+                toolConfig: {
+                    retrievalConfig: {
+                        latLng: {
+                            latitude: location.latitude,
+                            longitude: location.longitude,
+                        }
+                    }
+                }
+            })
+        },
+    });
 };
 
 export const generateReport = async (address: string, location?: { latitude: number; longitude: number }): Promise<{ report: ReportData; sources: Source[] } | null> => {
@@ -111,23 +130,7 @@ For each item in the arrays, provide a concise 'name' and 'details' string. For 
         const sources = parseSources(response.candidates?.[0]?.groundingMetadata?.groundingChunks);
 
         // Initialize chat for follow-up questions
-        chat = getAI().chats.create({
-            model: 'gemini-2.5-flash',
-            config: {
-                systemInstruction: `You are a helpful local guide AI. You have already provided a report for the address "${address}". The report summary is: ${JSON.stringify(report)}. Now, answer follow-up questions from the user about that location. Use your knowledge and the provided tools to give accurate, up-to-date information.`,
-                tools: [{ googleSearch: {} }, { googleMaps: {} }],
-                ...(location && {
-                    toolConfig: {
-                        retrievalConfig: {
-                            latLng: {
-                                latitude: location.latitude,
-                                longitude: location.longitude,
-                            }
-                        }
-                    }
-                })
-            },
-        });
+        initializeChatForReport(address, report, location);
 
 
         return { report, sources };
@@ -140,7 +143,7 @@ For each item in the arrays, provide a concise 'name' and 'details' string. For 
 
 export const sendChatMessage = async (message: string): Promise<{ text: string; sources: Source[] } | null> => {
     if (!chat) {
-        throw new Error("Chat not initialized. Please generate a report first.");
+        throw new Error("Chat not initialized. Please generate or load a report first.");
     }
     try {
         const response = await chat.sendMessage({ message });

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { AddressForm } from './components/AddressForm';
 import { ReportSection } from './components/ReportSection';
@@ -6,7 +5,7 @@ import { ChatInput } from './components/ChatInput';
 import { ChatMessage } from './components/ChatMessage';
 import { HistoryModal } from './components/HistoryModal';
 import { ReportActions } from './components/ReportActions';
-import { generateReport, sendChatMessage } from './services/geminiService';
+import { generateReport, sendChatMessage, initializeChatForReport } from './services/geminiService';
 import { ReportData, ChatMessage as ChatMessageType, Source, HistoricReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useHistory } from './hooks/useHistory';
@@ -32,7 +31,30 @@ const App: React.FC = () => {
     }
   }, [chatHistory]);
 
+  const handleLoadReport = (historicReport: HistoricReport) => {
+    setCurrentAddress(historicReport.address);
+    setReport(historicReport.report);
+    setReportSources(historicReport.sources);
+    setChatHistory([]);
+    setError(null);
+    setIsHistoryOpen(false);
+
+    // Re-initialize chat context
+    const userLocation = location.latitude && location.longitude ? { latitude: location.latitude, longitude: location.longitude } : undefined;
+    initializeChatForReport(historicReport.address, historicReport.report, userLocation);
+  };
+  
   const handleGenerateReport = async (address: string) => {
+    // Check history first to avoid re-generating an existing report
+    const existingReport = history.find(
+      (item) => item.address.trim().toLowerCase() === address.trim().toLowerCase()
+    );
+
+    if (existingReport) {
+      handleLoadReport(existingReport);
+      return;
+    }
+    
     setIsReportLoading(true);
     setError(null);
     setReport(null);
@@ -54,15 +76,6 @@ const App: React.FC = () => {
     setIsReportLoading(false);
   };
 
-  const handleLoadReport = (historicReport: HistoricReport) => {
-    setCurrentAddress(historicReport.address);
-    setReport(historicReport.report);
-    setReportSources(historicReport.sources);
-    setChatHistory([]);
-    setError(null);
-    setIsHistoryOpen(false);
-  };
-  
   const handleSendMessage = async (message: string) => {
     const userMessage: ChatMessageType = { role: 'user', text: message };
     setChatHistory((prev) => [...prev, userMessage]);
