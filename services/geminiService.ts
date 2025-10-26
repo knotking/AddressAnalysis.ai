@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat, GroundingChunk } from "@google/genai";
 import { ReportData, ChatMessage, Source } from '../types';
 
@@ -61,6 +62,25 @@ export const initializeChatForReport = (address: string, report: ReportData, loc
             })
         },
     });
+};
+
+export const generateReportSummary = async (report: ReportData): Promise<string | null> => {
+    const model = getAI();
+    const prompt = `Based on the following JSON report data for a location, provide a concise summary of the top 3-4 highlights (pros) and top 3-4 lowlights (cons) for someone considering living there. Structure your response with a "Highlights" section and a "Lowlights" section, using bullet points for each. Do not use markdown for the headings, just plain text titles.
+    
+    Report Data:
+    ${JSON.stringify(report, null, 2)}`;
+
+    try {
+        const response = await model.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
+        return response.text;
+    } catch (error) {
+        console.error("Error generating report summary:", error);
+        return null;
+    }
 };
 
 export const generateReport = async (address: string, location?: { latitude: number; longitude: number }): Promise<{ report: ReportData; sources: Source[] } | null> => {

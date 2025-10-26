@@ -59,7 +59,7 @@ const renderDetails = (details: string) => {
 
 
 export const ReportSection: React.FC<ReportSectionProps> = ({ title, summary, items, sources }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   const panelId = `section-panel-${title.replace(/\s+/g, '-')}`;
   const headingId = `section-heading-${title.replace(/\s+/g, '-')}`;

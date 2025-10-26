@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { ReportData } from '../types';
-import { DownloadIcon, ClipboardIcon } from './icons';
+import { DownloadIcon, ClipboardIcon, SmsIcon, WhatsAppIcon } from './icons';
 
 interface ReportActionsProps {
   address: string;
@@ -62,9 +61,25 @@ export const ReportActions: React.FC<ReportActionsProps> = ({ address, report })
              setTimeout(() => setCopyButtonText('Copy Summary'), 2000);
         });
     };
+    
+    const handleShare = (platform: 'sms' | 'whatsapp') => {
+        const summaryText = formatReportForShare(address, report);
+        const encodedText = encodeURIComponent(summaryText);
+        let url = '';
+
+        if (platform === 'sms') {
+            url = `sms:?&body=${encodedText}`;
+        } else if (platform === 'whatsapp') {
+            url = `https://wa.me/?text=${encodedText}`;
+        }
+
+        if (url) {
+            window.open(url, '_blank');
+        }
+    };
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
             <button
                 onClick={handleDownload}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-full transition-colors"
@@ -80,6 +95,22 @@ export const ReportActions: React.FC<ReportActionsProps> = ({ address, report })
             >
                 <ClipboardIcon />
                 <span>{copyButtonText}</span>
+            </button>
+             <button
+                onClick={() => handleShare('sms')}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-full transition-colors"
+                aria-label="Share report summary via SMS"
+            >
+                <SmsIcon />
+                <span>SMS</span>
+            </button>
+            <button
+                onClick={() => handleShare('whatsapp')}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-full transition-colors"
+                aria-label="Share report summary on WhatsApp"
+            >
+                <WhatsAppIcon />
+                <span>WhatsApp</span>
             </button>
         </div>
     );

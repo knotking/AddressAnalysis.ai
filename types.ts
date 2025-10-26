@@ -42,4 +42,5 @@ export interface HistoricReport {
   timestamp: number;
   report: ReportData;
   sources: Source[];
+  summary?: string;
 }

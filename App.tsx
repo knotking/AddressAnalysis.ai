@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { AddressForm } from './components/AddressForm';
 import { ReportSection } from './components/ReportSection';
@@ -5,7 +6,8 @@ import { ChatInput } from './components/ChatInput';
 import { ChatMessage } from './components/ChatMessage';
 import { HistoryModal } from './components/HistoryModal';
 import { ReportActions } from './components/ReportActions';
-import { generateReport, sendChatMessage, initializeChatForReport } from './services/geminiService';
+import { ReportSummary } from './components/ReportSummary';
+import { generateReport, sendChatMessage, initializeChatForReport, generateReportSummary } from './services/geminiService';
 import { ReportData, ChatMessage as ChatMessageType, Source, HistoricReport } from './types';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useHistory } from './hooks/useHistory';
@@ -13,10 +15,12 @@ import { HistoryIcon } from './components/icons';
 
 const App: React.FC = () => {
   const [report, setReport] = useState<ReportData | null>(null);
+  const [reportSummary, setReportSummary] = useState<string | null>(null);
   const [currentAddress, setCurrentAddress] = useState<string>('');
   const [reportSources, setReportSources] = useState<Source[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
   const [isReportLoading, setIsReportLoading] = useState(false);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -35,6 +39,7 @@ const App: React.FC = () => {
     setCurrentAddress(historicReport.address);
     setReport(historicReport.report);
     setReportSources(historicReport.sources);
+    setReportSummary(historicReport.summary || null);
     setChatHistory([]);
     setError(null);
     setIsHistoryOpen(false);
@@ -45,7 +50,6 @@ const App: React.FC = () => {
   };
   
   const handleGenerateReport = async (address: string) => {
-    // Check history first to avoid re-generating an existing report
     const existingReport = history.find(
       (item) => item.address.trim().toLowerCase() === address.trim().toLowerCase()
     );
@@ -58,6 +62,7 @@ const App: React.FC = () => {
     setIsReportLoading(true);
     setError(null);
     setReport(null);
+    setReportSummary(null);
     setCurrentAddress(address);
     setChatHistory([]);
     setReportSources([]);
@@ -65,15 +70,25 @@ const App: React.FC = () => {
     const userLocation = location.latitude && location.longitude ? { latitude: location.latitude, longitude: location.longitude } : undefined;
 
     const result = await generateReport(address, userLocation);
+    
+    setIsReportLoading(false);
 
     if (result) {
       setReport(result.report);
       setReportSources(result.sources);
-      saveReport(address, result.report, result.sources);
+
+      setIsSummaryLoading(true);
+      const summary = await generateReportSummary(result.report);
+      if (summary) {
+        setReportSummary(summary);
+      }
+      setIsSummaryLoading(false);
+      
+      saveReport(address, result.report, result.sources, summary || '');
+
     } else {
       setError('Failed to generate the report. The address may be invalid or the service is unavailable. Please try again.');
     }
-    setIsReportLoading(false);
   };
 
   const handleSendMessage = async (message: string) => {
@@ -137,6 +152,20 @@ const App: React.FC = () => {
                 <h2 className="text-3xl font-bold text-white">Location Report</h2>
                 <ReportActions address={currentAddress} report={report} />
               </div>
+              
+              {isSummaryLoading && (
+                <div className="p-4 bg-gray-800 border border-gray-700 rounded-lg mb-6 animate-pulse">
+                   <div className="h-6 bg-gray-700 rounded w-1/4 mb-4"></div>
+                   <div className="space-y-3">
+                     <div className="h-4 bg-gray-700 rounded w-full"></div>
+                     <div className="h-4 bg-gray-700 rounded w-5/6"></div>
+                     <div className="h-4 bg-gray-700 rounded w-full"></div>
+                     <div className="h-4 bg-gray-700 rounded w-4/6"></div>
+                   </div>
+                </div>
+              )}
+              {reportSummary && !isSummaryLoading && <ReportSummary summary={reportSummary} />}
+
               {(Object.keys(report) as Array<keyof ReportData>).map((key) => {
                 const value = report[key];
                 return (

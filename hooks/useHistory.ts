@@ -15,13 +15,14 @@ export const useHistory = () => {
         }
     });
 
-    const saveReport = useCallback((address: string, report: ReportData, sources: Source[]) => {
+    const saveReport = useCallback((address: string, report: ReportData, sources: Source[], summary: string) => {
         const newReport: HistoricReport = {
             id: Date.now().toString(),
             address,
             timestamp: Date.now(),
             report,
             sources,
+            summary,
         };
 
         setHistory(prevHistory => {
