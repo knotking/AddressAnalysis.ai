@@ -1,0 +1,7 @@
+{
+  "name": "Neighborhood Analyst AI",
+  "description": "An AI-powered chatbot that provides a detailed analysis of any address. Get insights on local schools, stores, parks, and connectivity, then ask follow-up questions to dive deeper.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
